@@ -46,12 +46,15 @@ func (w *CeleryWorker) StartWorkerWithContext(ctx context.Context) {
 			defer w.workWG.Done()
 			ticker := time.NewTicker(w.rateLimitPeriod)
 			for {
+				log.Println("new cycle of reading")
 				select {
 				case <-wctx.Done():
 					return
 				case <-ticker.C:
 					// process task request
+					log.Println("begin reading message")
 					taskMessage, err := w.broker.GetTaskMessage()
+					log.Println("reading message finished")
 					if err != nil || taskMessage == nil {
 						continue
 					}
