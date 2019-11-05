@@ -30,10 +30,10 @@ func NewRedisBroker(conn *redis.Pool) *RedisCeleryBroker {
 //
 // Deprecated: NewRedisCeleryBroker exists for historical compatibility
 // and should not be used. Use NewRedisBroker instead to create new RedisCeleryBroker.
-func NewRedisCeleryBroker(uri string) *RedisCeleryBroker {
+func NewRedisCeleryBroker(uri, queue string) *RedisCeleryBroker {
 	return &RedisCeleryBroker{
 		Pool:      NewRedisPool(uri),
-		queueName: "celery",
+		queueName: queue,
 	}
 }
 
@@ -52,6 +52,20 @@ func (cb *RedisCeleryBroker) SendCeleryMessage(message *CeleryMessage) error {
 	return nil
 }
 
+func (cb *RedisCeleryBroker) SendCeleryMessageToQueue(message *CeleryMessage, queue string) error {
+	jsonBytes, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+	conn := cb.Get()
+	defer conn.Close()
+	_, err = conn.Do("LPUSH", queue, jsonBytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetCeleryMessage retrieves celery message from redis queue
 func (cb *RedisCeleryBroker) GetCeleryMessage() (*CeleryMessage, error) {
 	conn := cb.Get()
@@ -64,7 +78,7 @@ func (cb *RedisCeleryBroker) GetCeleryMessage() (*CeleryMessage, error) {
 		return nil, fmt.Errorf("null message received from redis")
 	}
 	messageList := messageJSON.([]interface{})
-	if string(messageList[0].([]byte)) != "celery" {
+	if string(messageList[0].([]byte)) != cb.queueName {
 		return nil, fmt.Errorf("not a celery message: %v", messageList[0])
 	}
 	var message CeleryMessage
