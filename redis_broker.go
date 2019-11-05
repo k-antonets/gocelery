@@ -19,10 +19,10 @@ type RedisCeleryBroker struct {
 }
 
 // NewRedisBroker creates new RedisCeleryBroker with given redis connection pool
-func NewRedisBroker(conn *redis.Pool) *RedisCeleryBroker {
+func NewRedisBroker(conn *redis.Pool, queue string) *RedisCeleryBroker {
 	return &RedisCeleryBroker{
 		Pool:      conn,
-		queueName: "celery",
+		queueName: queue,
 	}
 }
 
