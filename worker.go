@@ -7,7 +7,6 @@ package gocelery
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 	"time"
@@ -41,20 +40,22 @@ func (w *CeleryWorker) StartWorkerWithContext(ctx context.Context) {
 	var wctx context.Context
 	wctx, w.cancel = context.WithCancel(ctx)
 	w.workWG.Add(w.numWorkers)
+	fmt.Println("starting workers for gocelery")
 	for i := 0; i < w.numWorkers; i++ {
 		go func(workerID int) {
 			defer w.workWG.Done()
 			ticker := time.NewTicker(w.rateLimitPeriod)
+			fmt.Printf("starting worker %d\n", workerID)
 			for {
-				log.Println("new cycle of reading")
+				fmt.Println("new cycle of reading")
 				select {
 				case <-wctx.Done():
 					return
 				case <-ticker.C:
 					// process task request
-					log.Println("begin reading message")
+					fmt.Println("begin reading message")
 					taskMessage, err := w.broker.GetTaskMessage()
-					log.Println("reading message finished")
+					fmt.Println("reading message finished")
 					if err != nil || taskMessage == nil {
 						continue
 					}
@@ -62,7 +63,7 @@ func (w *CeleryWorker) StartWorkerWithContext(ctx context.Context) {
 					// run task
 					resultMsg, err := w.RunTask(taskMessage)
 					if err != nil {
-						log.Printf("failed to run task message %s: %+v", taskMessage.ID, err)
+						fmt.Printf("failed to run task message %s: %+v", taskMessage.ID, err)
 						continue
 					}
 					defer releaseResultMessage(resultMsg)
@@ -70,7 +71,7 @@ func (w *CeleryWorker) StartWorkerWithContext(ctx context.Context) {
 					// push result to backend
 					err = w.backend.SetResult(taskMessage.ID, resultMsg)
 					if err != nil {
-						log.Printf("failed to push result: %+v", err)
+						fmt.Printf("failed to push result: %+v", err)
 						continue
 					}
 				}
