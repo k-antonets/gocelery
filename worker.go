@@ -40,22 +40,17 @@ func (w *CeleryWorker) StartWorkerWithContext(ctx context.Context) {
 	var wctx context.Context
 	wctx, w.cancel = context.WithCancel(ctx)
 	w.workWG.Add(w.numWorkers)
-	fmt.Println("starting workers for gocelery")
 	for i := 0; i < w.numWorkers; i++ {
 		go func(workerID int) {
 			defer w.workWG.Done()
 			ticker := time.NewTicker(w.rateLimitPeriod)
-			fmt.Printf("starting worker %d\n", workerID)
 			for {
-				fmt.Println("new cycle of reading")
 				select {
 				case <-wctx.Done():
 					return
 				case <-ticker.C:
 					// process task request
-					fmt.Println("begin reading message")
 					taskMessage, err := w.broker.GetTaskMessage()
-					fmt.Println("reading message finished")
 					if err != nil || taskMessage == nil {
 						continue
 					}
