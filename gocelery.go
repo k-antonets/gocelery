@@ -64,6 +64,13 @@ func (cc *CeleryClient) WaitForStopWorker() {
 	cc.worker.StopWait()
 }
 
+func (cc *CeleryClient) GetAsyncResult(task_id string) *AsyncResult {
+	return &AsyncResult{
+		TaskID:  task_id,
+		backend: cc.backend,
+	}
+}
+
 // Delay gets asynchronous result
 func (cc *CeleryClient) Delay(task string, args ...interface{}) (*AsyncResult, error) {
 	celeryTask := getTaskMessage(task)
