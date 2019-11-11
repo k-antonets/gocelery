@@ -160,7 +160,12 @@ func (ar *AsyncResult) Get(timeout time.Duration) (interface{}, error) {
 		case <-ticker.C:
 			val, err := ar.AsyncGet()
 			if err != nil {
-				continue
+				switch err.(type) {
+				case *ErrTaskFailure:
+					return nil, err
+				default:
+					continue
+				}
 			}
 			return val, nil
 		}
@@ -178,6 +183,9 @@ func (ar *AsyncResult) AsyncGet() (interface{}, error) {
 	}
 	if val == nil {
 		return nil, err
+	}
+	if val.Status == "FAILURE" {
+		return nil, NewErrTaskFailure(val)
 	}
 	if val.Status != "SUCCESS" {
 		return nil, fmt.Errorf("error response status %v", val)
@@ -197,4 +205,20 @@ func (ar *AsyncResult) Ready() (bool, error) {
 	}
 	ar.result = val
 	return (val != nil), nil
+}
+
+type ErrTaskFailure struct {
+	message   string
+	traceback string
+}
+
+func NewErrTaskFailure(rm *ResultMessage) *ErrTaskFailure {
+	return &ErrTaskFailure{
+		message:   fmt.Sprintf("task %s failed", rm.ID),
+		traceback: rm.Traceback.(string),
+	}
+}
+
+func (e *ErrTaskFailure) Error() string {
+	return fmt.Sprintf("%s with traceback: %s", e.message, e.traceback)
 }
